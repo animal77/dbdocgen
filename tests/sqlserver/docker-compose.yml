@@ -1,0 +1,58 @@
+version: '3.7'
+
+services:
+  db:
+    #image: mcr.microsoft.com/mssql/server:2022-latest
+    build:
+      context: .
+      dockerfile: SqlServerDockerfile
+    container_name: sqlserver
+    environment:
+      MSSQL_SA_PASSWORD: Pa55word!
+      ACCEPT_EULA: Y
+    ports:
+      - "1433:1433"
+    volumes:
+      - .:/dbdocgen
+    command:
+      - /bin/bash
+      - -c
+      - |
+        pip3 install -r /dbdocgen/requirements.txt
+
+        /opt/mssql/bin/sqlservr &
+        
+        # Wait for SQL Server to start up
+        while ! /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P Pa55word! -Q "SELECT 1" > /dev/null 2>&1; do
+          sleep 5
+        done
+
+        # Create database
+        if /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P Pa55word! -d master -Q "SELECT name FROM sys.databases WHERE name = 'MyDatabase'" | grep -q MyDatabase; then
+          echo 'Database "MyDatabase" already exists. Skipping creation.'
+        else
+          # Create database
+          /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P Pa55word! -d master -Q "CREATE DATABASE MyDatabase;"
+        fi
+
+        # Check if the sqlcmd command was interrupted
+        if [ $? -ne 0 ]; then
+          echo 'Sqlcmd command was interrupted. Exiting...'
+          exit 1
+        fi
+
+        wait
+
+  liquibase:
+    image: liquibase/liquibase:4.28-alpine
+    container_name: liquibase
+    depends_on:
+      - db
+    environment:
+      LIQUIBASE_COMMAND_URL: jdbc:sqlserver://db:1433;databaseName=MyDatabase;encrypt=true;trustServerCertificate=true
+      LIQUIBASE_COMMAND_USERNAME: SA
+      LIQUIBASE_COMMAND_PASSWORD: Pa55word!
+      LIQUIBASE_COMMAND_CHANGELOG_FILE: changelog/changelog.xml
+    volumes:
+      - ./liquibase:/liquibase/changelog
+    command: update

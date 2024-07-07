@@ -1,0 +1,93 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet author="me" id="create_table_users">
+        <createTable tableName="users" remarks="Represents all users of the system">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)" remarks="also serves as the login of the user">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="me" id="create_table_posts">
+        <createTable tableName="posts" remarks="All the posts that users of the system create">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)" remarks="The title of the post">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="VARCHAR(MAX)" remarks="The body of the post">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="me" id="add_foreign_key_posts_users">
+        <addForeignKeyConstraint baseTableName="posts" baseColumnNames="user_id" referencedTableName="users" referencedColumnNames="id" constraintName="fk_posts_users"/>
+    </changeSet>
+
+    <changeSet id="func" author="yourname">
+        <sql>
+            <![CDATA[
+            CREATE FUNCTION dbo.GetProductNameById
+            (
+                @ProductId INT
+            )
+            RETURNS VARCHAR(100)
+            AS
+            BEGIN
+                DECLARE @ProductName VARCHAR(100)
+
+                SELECT @ProductName = Name
+                FROM dbo.Products
+                WHERE ProductId = @ProductId
+
+                RETURN @ProductName
+            END
+            ]]>
+        </sql>
+    </changeSet>
+
+    <changeSet id="proc" author="yourname">
+        <sql>
+            <![CDATA[
+            CREATE PROCEDURE dbo.UpdateProductPrice
+            (
+                @ProductId INT,
+                @NewPrice DECIMAL(10, 2)
+            )
+            AS
+            BEGIN
+                UPDATE dbo.Products
+                SET Price = @NewPrice
+                WHERE ProductId = @ProductId
+
+                SELECT 'Price updated successfully.' AS Result
+            END
+            ]]>
+        </sql>
+    </changeSet>
+
+    <changeSet id="view" author="yourname">
+        <sql>
+            <![CDATA[
+            CREATE VIEW dbo.postView
+            AS
+            SELECT id, content
+            FROM dbo.posts
+            ]]>
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

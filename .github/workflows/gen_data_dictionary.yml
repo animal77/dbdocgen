@@ -1,0 +1,58 @@
+name: Database Scripts Workflow
+
+on:
+  workflow_call:
+    inputs:
+      DATABASE_TYPE:
+        description: 'The type of database to run scripts against. One of oracle, postgresql, sqlserver, db2.'
+        type: choice
+        required: true
+        options:
+          - oracle
+          - postgresql
+          - sqlserver
+          - db2
+
+jobs:
+  run_scripts:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_IMAGE: ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install database client libraries and set Docker image
+        run: |
+          case ${{ inputs.DATABASE_TYPE }} in
+            oracle)
+              DATABASE_IMAGE="store/oracle/database-instantclient:19"
+              docker pull $DATABASE_IMAGE
+              ;;
+            postgresql)
+              DATABASE_IMAGE="postgres:latest"
+              docker pull $DATABASE_IMAGE
+              ;;
+            sqlserver)
+              DATABASE_IMAGE="mcr.microsoft.com/mssql/server:2022-latest"
+              docker pull $DATABASE_IMAGE
+              ;;
+            db2)
+              DATABASE_IMAGE="ibmcom/db2:latest"
+              docker pull $DATABASE_IMAGE
+              ;;
+          esac
+          echo "::set-env name=DATABASE_IMAGE::$DATABASE_IMAGE"
+          echo "DATABASE_IMAGE=$DATABASE_IMAGE >> $GITHUB_ENV
+
+      - name: Run script for ${{ inputs.DATABASE_TYPE }}
+        run: |
+          docker run --rm -v $(pwd):/usr/src -w /usr/src ${{ env.DATABASE_IMAGE }} python dbdocgen/gen_data_dictionary.py

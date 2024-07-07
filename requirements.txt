@@ -1,0 +1,7 @@
+atlassian-python-api
+python-dotenv
+cx_Oracle>=8.3
+psycopg[binary]
+pyodbc>=5
+#ibm_db>=3.2
+SQLAlchemy>=2
